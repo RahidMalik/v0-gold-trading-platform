@@ -50,12 +50,12 @@ export async function getGoldPrice(): Promise<GoldPriceData> {
       change24h: Math.round(variation),
       changePercent24h: Number(((variation / DEMO_GOLD_PRICE.pricePerGram) * 100).toFixed(2)),
     }
-    
+
     cachedPrice = {
       data: demoData,
       fetchedAt: Date.now(),
     }
-    
+
     return demoData
   }
 
@@ -98,7 +98,7 @@ export async function getGoldPrice(): Promise<GoldPriceData> {
       if (historicalData.success) {
         const yesterdayPrice = (historicalData.rates?.IDR || 0) / 31.1035
         change24h = pricePerGramIDR - yesterdayPrice
-        changePercent24h = yesterdayPrice > 0 
+        changePercent24h = yesterdayPrice > 0
           ? Number(((change24h / yesterdayPrice) * 100).toFixed(2))
           : 0
       }
@@ -122,12 +122,12 @@ export async function getGoldPrice(): Promise<GoldPriceData> {
     return goldPriceData
   } catch (error) {
     console.error("Failed to fetch gold price:", error)
-    
+
     // Return cached or demo on error
     if (cachedPrice) {
       return cachedPrice.data
     }
-    
+
     return DEMO_GOLD_PRICE
   }
 }
@@ -136,38 +136,42 @@ export async function getGoldPrice(): Promise<GoldPriceData> {
 export async function getGoldPriceHistory(days: number = 30): Promise<Array<{ date: string; price: number }>> {
   const history: Array<{ date: string; price: number }> = []
   const basePrice = DEMO_GOLD_PRICE.pricePerGram
-  
+
   for (let i = days; i >= 0; i--) {
     const date = new Date()
     date.setDate(date.getDate() - i)
-    
+
     // Generate realistic price variation
     const variation = Math.sin(i * 0.3) * 20000 + (Math.random() - 0.5) * 15000
     const trendAdjustment = (days - i) * 500 // Slight upward trend
-    
+
     history.push({
       date: date.toISOString().split("T")[0],
       price: Math.round(basePrice + variation + trendAdjustment),
     })
   }
-  
+
   return history
 }
 
-// Format currency for display
+// Format currency for display (UPDATED - SAFE VERSION)
 export function formatCurrency(amount: number, currency: string = "IDR"): string {
+  const safeAmount = Number(amount) || 0;
+
   return new Intl.NumberFormat("id-ID", {
     style: "currency",
     currency,
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-  }).format(amount)
+  }).format(safeAmount)
 }
 
-// Format gold weight
+// Format gold weight (UPDATED - SAFE VERSION)
 export function formatGoldWeight(grams: number): string {
-  if (grams >= 1000) {
-    return `${(grams / 1000).toFixed(3)} kg`
+  const safeGrams = Number(grams) || 0;
+
+  if (safeGrams >= 1000) {
+    return `${(safeGrams / 1000).toFixed(3)} kg`
   }
-  return `${grams.toFixed(3)} g`
+  return `${safeGrams.toFixed(3)} g`
 }

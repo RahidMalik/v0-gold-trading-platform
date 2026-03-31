@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import { SidebarTrigger } from "@/components/ui/sidebar"
-import { Separator } from "@/components/ui/separator"
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import { Separator } from "@/components/ui/separator";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -9,9 +9,9 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
-import { usePathname } from "next/navigation"
-import { ThemeToggle } from "@/components/theme-toggle"
+} from "@/components/ui/breadcrumb";
+import { usePathname } from "next/navigation";
+// import { ThemeToggle } from "@/components/theme-toggle"
 
 const pathNameMap: Record<string, string> = {
   admin: "Admin",
@@ -23,11 +23,11 @@ const pathNameMap: Record<string, string> = {
   orders: "Orders",
   reports: "Reports",
   settings: "Settings",
-}
+};
 
 export function AdminHeader() {
-  const pathname = usePathname()
-  const segments = pathname.split("/").filter(Boolean)
+  const pathname = usePathname();
+  const segments = pathname.split("/").filter(Boolean);
 
   return (
     <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-background px-4">
@@ -58,9 +58,7 @@ export function AdminHeader() {
           ))}
         </BreadcrumbList>
       </Breadcrumb>
-      <div className="ml-auto">
-        <ThemeToggle />
-      </div>
+      <div className="ml-auto">{/* <ThemeToggle />/ */}</div>
     </header>
-  )
+  );
 }
