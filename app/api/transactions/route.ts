@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
-import prisma from "@/lib/prisma"
+import { getUserTransactions } from "@/lib/mock-data"
 
 export async function GET(req: NextRequest) {
   try {
@@ -14,34 +14,27 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "50")
     const offset = parseInt(searchParams.get("offset") || "0")
 
-    const where: { userId: string; type?: string } = {
-      userId: session.user.id,
-    }
+    let transactions = getUserTransactions(session.user.id)
 
     if (type) {
-      where.type = type
+      transactions = transactions.filter(tx => tx.type === type)
     }
 
-    const transactions = await prisma.transaction.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      take: limit,
-      skip: offset,
-    })
+    // Sort by date descending
+    transactions.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
 
-    const total = await prisma.transaction.count({ where })
+    const total = transactions.length
+    const paginatedTransactions = transactions.slice(offset, offset + limit)
 
     return NextResponse.json({
       success: true,
-      data: transactions.map((tx) => ({
+      data: paginatedTransactions.map((tx) => ({
         id: tx.id,
         type: tx.type,
-        amount: Number(tx.amount),
-        pricePerGram: Number(tx.pricePerGram),
-        totalValue: Number(tx.totalValue),
-        fee: Number(tx.fee),
+        goldAmount: tx.goldAmount,
+        cashAmount: tx.cashAmount,
+        goldPrice: tx.goldPrice,
         status: tx.status,
-        isAssistantTrade: tx.isAssistantTrade,
         createdAt: tx.createdAt.toISOString(),
       })),
       pagination: {

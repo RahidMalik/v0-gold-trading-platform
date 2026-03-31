@@ -1,8 +1,7 @@
 import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 import { compare } from "bcryptjs"
-import prisma from "@/lib/prisma"
-import type { User as PrismaUser } from "@prisma/client"
+import { findUserByEmail, findUserById } from "@/lib/mock-data"
 
 declare module "next-auth" {
   interface Session {
@@ -48,9 +47,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           throw new Error("Email and password required")
         }
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email as string },
-        })
+        const user = findUserByEmail(credentials.email as string)
 
         if (!user || !user.isActive) {
           throw new Error("Invalid credentials or account disabled")
@@ -71,8 +68,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           name: user.name,
           role: user.role,
           referralCode: user.referralCode,
-          goldBalance: Number(user.goldBalance),
-          cashBalance: Number(user.cashBalance),
+          goldBalance: user.goldBalance,
+          cashBalance: user.cashBalance,
         }
       },
     }),
@@ -93,14 +90,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.referralCode = token.referralCode
         
         // Fetch fresh balance data
-        const freshUser = await prisma.user.findUnique({
-          where: { id: token.id },
-          select: { goldBalance: true, cashBalance: true },
-        })
+        const freshUser = findUserById(token.id)
         
         if (freshUser) {
-          session.user.goldBalance = Number(freshUser.goldBalance)
-          session.user.cashBalance = Number(freshUser.cashBalance)
+          session.user.goldBalance = freshUser.goldBalance
+          session.user.cashBalance = freshUser.cashBalance
         }
       }
       return session
