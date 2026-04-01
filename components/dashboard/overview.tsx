@@ -1,9 +1,15 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   TrendingUp,
   TrendingDown,
@@ -12,77 +18,86 @@ import {
   ArrowDownRight,
   Coins,
   RefreshCw,
-} from "lucide-react"
-import Link from "next/link"
-import { formatCurrency, formatGoldWeight } from "@/lib/gold-price"
-import { GoldPriceChart } from "@/components/dashboard/gold-price-chart"
-import { RecentTransactions } from "@/components/dashboard/recent-transactions"
+} from "lucide-react";
+import Link from "next/link";
+import { formatCurrency, formatGoldWeight } from "@/lib/gold-price";
+import { GoldPriceChart } from "@/components/dashboard/gold-price-chart";
+import { RecentTransactions } from "@/components/dashboard/recent-transactions";
 
 interface DashboardOverviewProps {
   user: {
-    id: string
-    name: string | null
-    email: string
-    goldBalance: number
-    cashBalance: number
-  }
+    id: string;
+    name: string | null;
+    email: string;
+    goldBalance: number;
+    cashBalance: number;
+  };
 }
 
 interface GoldPriceData {
-  pricePerGram: number
-  pricePerOunce: number
-  currency: string
-  timestamp: string
-  change24h: number
-  changePercent24h: number
-  history?: Array<{ date: string; price: number }>
+  pricePerGram: number;
+  pricePerOunce: number;
+  currency: string;
+  timestamp: string;
+  change24h: number;
+  changePercent24h: number;
+  history?: Array<{ date: string; price: number }>;
 }
 
 export function DashboardOverview({ user }: DashboardOverviewProps) {
-  const [goldPrice, setGoldPrice] = useState<GoldPriceData | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [goldPrice, setGoldPrice] = useState<GoldPriceData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const fetchGoldPrice = async () => {
-    setIsLoading(true)
+    setIsLoading(true);
     try {
-      const response = await fetch("/api/gold/price?history=true&days=30")
-      const data = await response.json()
+      const response = await fetch("/api/gold/price?history=true&days=30");
+      const data = await response.json();
       if (data.success) {
-        setGoldPrice(data.data)
+        setGoldPrice(data.data);
       }
     } catch (error) {
-      console.error("Failed to fetch gold price:", error)
+      console.error("Failed to fetch gold price:", error);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    fetchGoldPrice()
+    fetchGoldPrice();
     // Refresh every 60 seconds
-    const interval = setInterval(fetchGoldPrice, 60000)
-    return () => clearInterval(interval)
-  }, [])
+    const interval = setInterval(fetchGoldPrice, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   const portfolioValue = goldPrice
     ? user.goldBalance * goldPrice.pricePerGram + user.cashBalance
-    : user.cashBalance
+    : user.cashBalance;
 
-  const goldValue = goldPrice ? user.goldBalance * goldPrice.pricePerGram : 0
+  const goldValue = goldPrice ? user.goldBalance * goldPrice.pricePerGram : 0;
 
   return (
     <div className="space-y-6">
       {/* Page Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-balance">Dashboard</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-balance">
+            Dashboard
+          </h1>
           <p className="text-muted-foreground">
             Monitor your gold investments and market trends
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={fetchGoldPrice} disabled={isLoading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={fetchGoldPrice}
+            disabled={isLoading}
+          >
+            <RefreshCw
+              className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`}
+            />
             Refresh
           </Button>
           <Button asChild>
@@ -104,13 +119,19 @@ export function DashboardOverview({ user }: DashboardOverviewProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {goldPrice ? formatCurrency(goldPrice.pricePerGram) : "Loading..."}
+              {goldPrice
+                ? formatCurrency(goldPrice.pricePerGram)
+                : "Loading..."}
             </div>
             <p className="text-xs text-muted-foreground">per gram</p>
             {goldPrice && (
-              <div className={`flex items-center text-xs mt-1 ${
-                goldPrice.changePercent24h >= 0 ? "text-green-600" : "text-red-600"
-              }`}>
+              <div
+                className={`flex items-center text-xs mt-1 ${
+                  goldPrice.changePercent24h >= 0
+                    ? "text-green-600"
+                    : "text-red-600"
+                }`}
+              >
                 {goldPrice.changePercent24h >= 0 ? (
                   <TrendingUp className="h-3 w-3 mr-1" />
                 ) : (
@@ -126,11 +147,15 @@ export function DashboardOverview({ user }: DashboardOverviewProps) {
         {/* Portfolio Value Card */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Portfolio Value</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Portfolio Value
+            </CardTitle>
             <Wallet className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(portfolioValue)}</div>
+            <div className="text-2xl font-bold">
+              {formatCurrency(portfolioValue)}
+            </div>
             <p className="text-xs text-muted-foreground">Total assets value</p>
           </CardContent>
         </Card>
@@ -142,7 +167,9 @@ export function DashboardOverview({ user }: DashboardOverviewProps) {
             <ArrowUpRight className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatGoldWeight(user.goldBalance)}</div>
+            <div className="text-2xl font-bold">
+              {formatGoldWeight(user.goldBalance)}
+            </div>
             <p className="text-xs text-muted-foreground">
               {formatCurrency(goldValue)} value
             </p>
@@ -156,8 +183,12 @@ export function DashboardOverview({ user }: DashboardOverviewProps) {
             <ArrowDownRight className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(user.cashBalance)}</div>
-            <p className="text-xs text-muted-foreground">Available for trading</p>
+            <div className="text-2xl font-bold">
+              {formatCurrency(user.cashBalance)}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Available for trading
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -204,10 +235,10 @@ export function DashboardOverview({ user }: DashboardOverviewProps) {
         </Card>
       </div>
 
-      {/* Quick Actions */}
+      {/* Quick Actions (FIXED) */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card className="hover:border-primary/50 transition-colors cursor-pointer" asChild>
-          <Link href="/dashboard/trade">
+        <Link href="/dashboard/trade" className="block">
+          <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
             <CardHeader>
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30">
@@ -215,14 +246,17 @@ export function DashboardOverview({ user }: DashboardOverviewProps) {
                 </div>
                 <div>
                   <CardTitle className="text-base">Buy Gold</CardTitle>
-                  <CardDescription>Purchase digital gold instantly</CardDescription>
+                  <CardDescription>
+                    Purchase digital gold instantly
+                  </CardDescription>
                 </div>
               </div>
             </CardHeader>
-          </Link>
-        </Card>
-        <Card className="hover:border-primary/50 transition-colors cursor-pointer" asChild>
-          <Link href="/dashboard/trade">
+          </Card>
+        </Link>
+
+        <Link href="/dashboard/trade" className="block">
+          <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
             <CardHeader>
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/30">
@@ -230,14 +264,17 @@ export function DashboardOverview({ user }: DashboardOverviewProps) {
                 </div>
                 <div>
                   <CardTitle className="text-base">Sell Gold</CardTitle>
-                  <CardDescription>Convert gold to cash balance</CardDescription>
+                  <CardDescription>
+                    Convert gold to cash balance
+                  </CardDescription>
                 </div>
               </div>
             </CardHeader>
-          </Link>
-        </Card>
-        <Card className="hover:border-primary/50 transition-colors cursor-pointer" asChild>
-          <Link href="/dashboard/shop">
+          </Card>
+        </Link>
+
+        <Link href="/dashboard/shop" className="block">
+          <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
             <CardHeader>
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-primary/10">
@@ -249,9 +286,9 @@ export function DashboardOverview({ user }: DashboardOverviewProps) {
                 </div>
               </div>
             </CardHeader>
-          </Link>
-        </Card>
+          </Card>
+        </Link>
       </div>
     </div>
-  )
+  );
 }

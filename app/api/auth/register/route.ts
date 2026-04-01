@@ -1,16 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { hash } from "bcryptjs"
 import { z } from "zod"
-import { 
-  findUserByEmail, 
-  findUserByReferralCode, 
-  mockUsers, 
-  generateId, 
-  generateReferralCode 
-} from "@/lib/mock-data"
+import { prisma } from "@/lib/prisma"
 
 const registerSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
+  name: z.string().min(4, "Name must be at least 4 characters"),
   email: z.string().email("Invalid email address"),
   phone: z.string().min(10, "Phone number must be at least 10 digits"),
   password: z.string().min(8, "Password must be at least 8 characters"),
@@ -22,8 +16,9 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const validatedData = registerSchema.parse(body)
 
-    // Check if email already exists
-    const existingUser = findUserByEmail(validatedData.email)
+    const existingUser = await prisma.user.findUnique({
+      where: { email: validatedData.email }
+    })
 
     if (existingUser) {
       return NextResponse.json(
@@ -32,38 +27,30 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Find referrer if referral code provided
     let referrerId: string | null = null
     if (validatedData.referralCode) {
-      const referrer = findUserByReferralCode(validatedData.referralCode)
+      const referrer = await prisma.user.findUnique({
+        where: { referralCode: validatedData.referralCode }
+      })
       if (referrer) {
         referrerId = referrer.id
       }
     }
 
-    // Generate unique referral code for new user
-    const referralCode = generateReferralCode(validatedData.name)
+    const newReferralCode = Math.random().toString(36).substring(2, 8).toUpperCase()
 
-    // Hash password
     const hashedPassword = await hash(validatedData.password, 12)
 
-    // Create user (in demo mode, add to mock array)
-    const newUser = {
-      id: generateId("user"),
-      name: validatedData.name,
-      email: validatedData.email,
-      password: hashedPassword,
-      role: "USER" as const,
-      referralCode,
-      referredById: referrerId,
-      goldBalance: 0,
-      cashBalance: 0,
-      isActive: true,
-      createdAt: new Date(),
-    }
-
-    // Add to mock users (in real app, this would be a database insert)
-    mockUsers.push(newUser)
+    const newUser = await prisma.user.create({
+      data: {
+        name: validatedData.name,
+        email: validatedData.email,
+        phone: validatedData.phone,
+        password: hashedPassword,
+        referralCode: newReferralCode,
+        referredById: referrerId,
+      }
+    })
 
     return NextResponse.json({
       message: "Registration successful! You can now login with your credentials.",
