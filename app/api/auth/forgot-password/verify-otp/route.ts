@@ -5,10 +5,8 @@ export async function POST(req: NextRequest) {
     try {
         const { email, otp } = await req.json();
 
-        // 1. Database se user nikalain
         const user = await prisma.user.findUnique({ where: { email } });
 
-        // 2. Check karein ke OTP sahi hai aur expire to nahi hua (5 mins limit)
         if (
             !user ||
             user.resetOtp !== otp ||
@@ -21,7 +19,6 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        // 3. Agar sab theek hai, to Success message bhejein
         return NextResponse.json({ message: "OTP Verified successfully." });
 
     } catch (error) {

@@ -1,4 +1,4 @@
-import { apiClient } from "@/types/apiClient";
+import { apiClient } from "@/services/apiClient";
 import type { ApiResponse, PaginatedResponse } from "@/types/api";
 
 export type OrderStatus = "PENDING" | "CONFIRMED" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED";

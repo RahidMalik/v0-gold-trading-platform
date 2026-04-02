@@ -1,4 +1,4 @@
-import { apiClient } from "@/types/apiClient";
+import { apiClient } from "@/services/apiClient";
 import type { ApiResponse } from "@/types/api";
 
 export interface GoldPrice {
