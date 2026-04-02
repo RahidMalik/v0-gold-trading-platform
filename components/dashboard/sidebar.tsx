@@ -46,6 +46,7 @@ interface DashboardSidebarProps {
     id: string;
     name?: string | null;
     email?: string | null;
+    image?: string | null;
     role: string;
     referralCode: string;
     goldBalance: number;
@@ -175,7 +176,6 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
           </SidebarGroup>
         ))}
 
-        {/* ✅ Admin Section — sirf admin ko dikhe */}
         {isAdmin && (
           <SidebarGroup>
             <SidebarGroupLabel>Administration</SidebarGroupLabel>
@@ -235,20 +235,6 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
                     Settings
                   </Link>
                 </DropdownMenuItem>
-
-                {/* ✅ Admin link dropdown mein */}
-                {isAdmin && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
-                      <Link href="/admin">
-                        <ShieldCheck className="mr-2 h-4 w-4" />
-                        Admin Panel
-                      </Link>
-                    </DropdownMenuItem>
-                  </>
-                )}
-
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => signOut({ callbackUrl: "/login" })}

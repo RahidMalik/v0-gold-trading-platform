@@ -53,11 +53,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (!email || !password) throw new Error("Email and password required")
 
         const user = await prisma.user.findUnique({ where: { email } })
+
         if (!user || !user.isActive) throw new Error("Invalid credentials or account disabled")
+
+        if (!user.password) throw new Error("Please login with Google")
 
         const isPasswordValid = await compare(password, user.password)
         if (!isPasswordValid) throw new Error("Invalid credentials")
-
         return {
           id: user.id,
           email: user.email,
