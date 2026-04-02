@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { usePathname } from "next/navigation"
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   Sidebar,
   SidebarContent,
@@ -14,15 +14,15 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarSeparator,
-} from "@/components/ui/sidebar"
+} from "@/components/ui/sidebar";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   LayoutDashboard,
   TrendingUp,
@@ -36,20 +36,21 @@ import {
   LogOut,
   ChevronUp,
   Gem,
-} from "lucide-react"
-import { signOut } from "next-auth/react"
-import { formatCurrency, formatGoldWeight } from "@/lib/gold-price"
+  ShieldCheck,
+} from "lucide-react";
+import { signOut } from "next-auth/react";
+import { formatCurrency, formatGoldWeight } from "@/lib/gold-price";
 
 interface DashboardSidebarProps {
   user: {
-    id: string
-    name: string | null
-    email: string
-    role: string
-    referralCode: string
-    goldBalance: number
-    cashBalance: number
-  }
+    id: string;
+    name?: string | null;
+    email?: string | null;
+    role: string;
+    referralCode: string;
+    goldBalance: number;
+    cashBalance: number;
+  };
 }
 
 const menuItems = [
@@ -72,7 +73,11 @@ const menuItems = [
     title: "Rewards",
     items: [
       { title: "Referrals", href: "/dashboard/referrals", icon: Users },
-      { title: "Withdrawals", href: "/dashboard/withdrawals", icon: ArrowDownToLine },
+      {
+        title: "Withdrawals",
+        href: "/dashboard/withdrawals",
+        icon: ArrowDownToLine,
+      },
     ],
   },
   {
@@ -82,20 +87,22 @@ const menuItems = [
       { title: "Settings", href: "/dashboard/settings", icon: Settings },
     ],
   },
-]
+];
 
 export function DashboardSidebar({ user }: DashboardSidebarProps) {
-  const pathname = usePathname()
+  const pathname = usePathname();
+
+  const isAdmin = user.role === "ADMIN" || user.role === "SUPER_ADMIN";
 
   const getInitials = (name: string | null) => {
-    if (!name) return "U"
+    if (!name) return "U";
     return name
       .split(" ")
       .map((n) => n[0])
       .join("")
       .toUpperCase()
-      .slice(0, 2)
-  }
+      .slice(0, 2);
+  };
 
   return (
     <Sidebar variant="sidebar" collapsible="icon">
@@ -109,14 +116,18 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
                 </div>
                 <div className="flex flex-col gap-0.5 leading-none">
                   <span className="font-semibold">GoldInvest</span>
-                  <span className="text-xs text-muted-foreground">Trading Platform</span>
+                  <span className="text-xs text-muted-foreground">
+                    Trading Platform
+                  </span>
                 </div>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
+
       <SidebarSeparator />
+
       <SidebarContent>
         {/* Balance Card */}
         <SidebarGroup>
@@ -139,6 +150,7 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
           </SidebarGroupContent>
         </SidebarGroup>
 
+        {/* Main Menu */}
         {menuItems.map((section) => (
           <SidebarGroup key={section.title}>
             <SidebarGroupLabel>{section.title}</SidebarGroupLabel>
@@ -162,7 +174,31 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
             </SidebarGroupContent>
           </SidebarGroup>
         ))}
+
+        {/* ✅ Admin Section — sirf admin ko dikhe */}
+        {isAdmin && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Administration</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname.startsWith("/admin")}
+                    tooltip="Admin Panel"
+                  >
+                    <Link href="/admin">
+                      <ShieldCheck className="size-4" />
+                      <span>Admin Panel</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
+
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
@@ -175,7 +211,7 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
                   <Avatar className="h-8 w-8 rounded-lg">
                     <AvatarImage src={undefined} alt={user.name || "User"} />
                     <AvatarFallback className="rounded-lg bg-primary text-primary-foreground">
-                      {getInitials(user.name)}
+                      {getInitials(user.name ?? null)}
                     </AvatarFallback>
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight">
@@ -199,6 +235,20 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
                     Settings
                   </Link>
                 </DropdownMenuItem>
+
+                {/* ✅ Admin link dropdown mein */}
+                {isAdmin && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin">
+                        <ShieldCheck className="mr-2 h-4 w-4" />
+                        Admin Panel
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
+                )}
+
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => signOut({ callbackUrl: "/login" })}
@@ -213,5 +263,5 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
-  )
+  );
 }

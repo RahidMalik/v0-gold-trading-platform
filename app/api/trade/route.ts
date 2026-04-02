@@ -1,14 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
+import { prisma } from "@/lib/prisma"
 import { z } from "zod"
-import { 
-  findUserById, 
-  mockUsers, 
-  mockTransactions, 
-  mockReferrals,
-  mockSettings,
-  generateId 
-} from "@/lib/mock-data"
 
 const tradeSchema = z.object({
   type: z.enum(["BUY", "SELL"]),
@@ -16,30 +9,42 @@ const tradeSchema = z.object({
   pricePerGram: z.number().positive("Price must be positive"),
 })
 
-// Helper to handle referral commissions
-function processReferralCommission(
-  userId: string,
-  totalValue: number
-) {
+// Referral commission — From Prisma
+async function processReferralCommission(userId: string, totalValue: number) {
+  const settings = await prisma.systemSettings.findFirst()
   const commissionRates = [
-    mockSettings.referralCommissionLevel1 / 100,
-    mockSettings.referralCommissionLevel2 / 100,
-    mockSettings.referralCommissionLevel3 / 100,
+    Number(settings?.referralLevel1Percent || 5) / 100,
+    Number(settings?.referralLevel2Percent || 3) / 100,
+    Number(settings?.referralLevel3Percent || 2) / 100,
   ]
 
   let currentUserId = userId
-  for (let level = 1; level <= 3; level++) {
-    const user = findUserById(currentUserId)
+
+  for (let level = 0; level < 3; level++) {
+    const user = await prisma.user.findUnique({
+      where: { id: currentUserId },
+      select: { referredById: true },
+    })
+
     if (!user?.referredById) break
 
-    const commission = totalValue * commissionRates[level - 1]
-    
+    const commission = totalValue * commissionRates[level]
+
     if (commission > 0) {
-      // Add commission to referrer's cash balance
-      const referrerIndex = mockUsers.findIndex(u => u.id === user.referredById)
-      if (referrerIndex !== -1) {
-        mockUsers[referrerIndex].cashBalance += commission
-      }
+      await prisma.user.update({
+        where: { id: user.referredById },
+        data: { cashBalance: { increment: commission } },
+      })
+
+      await prisma.referralEarning.create({
+        data: {
+          userId: user.referredById,
+          fromUserId: userId,
+          level: level + 1,
+          transactionType: "TRADE",
+          amount: commission,
+        },
+      })
     }
 
     currentUserId = user.referredById
@@ -56,44 +61,60 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { type, amount, pricePerGram } = tradeSchema.parse(body)
 
-    const userIndex = mockUsers.findIndex(u => u.id === session.user.id)
-    if (userIndex === -1) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 })
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+    })
+
+    if (!user || !user.isActive) {
+      return NextResponse.json({ error: "User not found or disabled" }, { status: 404 })
     }
 
-    const user = mockUsers[userIndex]
-    const feePercent = 0.5 / 100 // 0.5% fee
+    const settings = await prisma.systemSettings.findFirst()
+    const feePercent = Number(
+      type === "BUY"
+        ? settings?.buyFeePercent || 0.5
+        : settings?.sellFeePercent || 0.5
+    ) / 100
+
     const totalValue = amount * pricePerGram
     const fee = totalValue * feePercent
 
     if (type === "BUY") {
       const totalCost = totalValue + fee
 
-      if (user.cashBalance < totalCost) {
+      if (Number(user.cashBalance) < totalCost) {
         return NextResponse.json(
           { error: "Insufficient cash balance" },
           { status: 400 }
         )
       }
 
-      // Execute buy trade
-      mockUsers[userIndex].cashBalance -= totalCost
-      mockUsers[userIndex].goldBalance += amount
+      // Prisma transaction — atomic operation
+      const [updatedUser, transaction] = await prisma.$transaction([
+        // User balance update
+        prisma.user.update({
+          where: { id: user.id },
+          data: {
+            cashBalance: { decrement: totalCost },
+            goldBalance: { increment: amount },
+          },
+        }),
+        // Transaction record
+        prisma.transaction.create({
+          data: {
+            userId: user.id,
+            type: "BUY",
+            amount: amount,
+            pricePerGram: pricePerGram,
+            totalValue: totalValue,
+            fee: fee,
+            status: "COMPLETED",
+          },
+        }),
+      ])
 
-      // Record transaction
-      mockTransactions.push({
-        id: generateId("txn"),
-        userId: user.id,
-        type: "BUY",
-        goldAmount: amount,
-        cashAmount: totalCost,
-        goldPrice: pricePerGram,
-        status: "COMPLETED",
-        createdAt: new Date(),
-      })
-
-      // Process referral commissions
-      processReferralCommission(user.id, totalValue)
+      // Referral commission process karo
+      await processReferralCommission(user.id, totalValue)
 
       return NextResponse.json({
         success: true,
@@ -105,13 +126,15 @@ export async function POST(req: NextRequest) {
           totalValue,
           fee,
           totalCost,
-          newGoldBalance: mockUsers[userIndex].goldBalance,
-          newCashBalance: mockUsers[userIndex].cashBalance,
+          transactionId: transaction.id,
+          newGoldBalance: Number(updatedUser.goldBalance),
+          newCashBalance: Number(updatedUser.cashBalance),
         },
       })
+
     } else {
       // SELL
-      if (user.goldBalance < amount) {
+      if (Number(user.goldBalance) < amount) {
         return NextResponse.json(
           { error: "Insufficient gold balance" },
           { status: 400 }
@@ -120,24 +143,32 @@ export async function POST(req: NextRequest) {
 
       const netProceeds = totalValue - fee
 
-      // Execute sell trade
-      mockUsers[userIndex].goldBalance -= amount
-      mockUsers[userIndex].cashBalance += netProceeds
+      // Prisma transaction — atomic operation
+      const [updatedUser, transaction] = await prisma.$transaction([
+        // User balance update
+        prisma.user.update({
+          where: { id: user.id },
+          data: {
+            goldBalance: { decrement: amount },
+            cashBalance: { increment: netProceeds },
+          },
+        }),
+        // Transaction record
+        prisma.transaction.create({
+          data: {
+            userId: user.id,
+            type: "SELL",
+            amount: amount,
+            pricePerGram: pricePerGram,
+            totalValue: totalValue,
+            fee: fee,
+            status: "COMPLETED",
+          },
+        }),
+      ])
 
-      // Record transaction
-      mockTransactions.push({
-        id: generateId("txn"),
-        userId: user.id,
-        type: "SELL",
-        goldAmount: amount,
-        cashAmount: netProceeds,
-        goldPrice: pricePerGram,
-        status: "COMPLETED",
-        createdAt: new Date(),
-      })
-
-      // Process referral commissions
-      processReferralCommission(user.id, totalValue)
+      // Referral commission process karo
+      await processReferralCommission(user.id, totalValue)
 
       return NextResponse.json({
         success: true,
@@ -149,11 +180,13 @@ export async function POST(req: NextRequest) {
           totalValue,
           fee,
           netProceeds,
-          newGoldBalance: mockUsers[userIndex].goldBalance,
-          newCashBalance: mockUsers[userIndex].cashBalance,
+          transactionId: transaction.id,
+          newGoldBalance: Number(updatedUser.goldBalance),
+          newCashBalance: Number(updatedUser.cashBalance),
         },
       })
     }
+
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -161,7 +194,6 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       )
     }
-
     console.error("Trade error:", error)
     return NextResponse.json(
       { error: "Trade failed. Please try again." },

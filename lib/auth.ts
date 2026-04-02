@@ -148,15 +148,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.referralCode = user.referralCode
       }
 
-      if (!token.role && token.email) {
-        const dbUser = await prisma.user.findUnique({
-          where: { email: token.email },
-        })
-        if (dbUser) {
-          token.id = dbUser.id
-          token.role = dbUser.role
-          token.referralCode = dbUser.referralCode
-        }
+      if (token.email === process.env.SUPER_ADMIN_EMAIL) {
+        token.role = "SUPER_ADMIN"
       }
 
       return token

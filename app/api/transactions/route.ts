@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
-import { getUserTransactions } from "@/lib/mock-data"
+import { prisma } from "@/lib/prisma"
 
 export async function GET(req: NextRequest) {
   try {
@@ -10,31 +10,46 @@ export async function GET(req: NextRequest) {
     }
 
     const { searchParams } = new URL(req.url)
-    const type = searchParams.get("type")
+    const type = searchParams.get("type") || undefined
+    const status = searchParams.get("status") || undefined
     const limit = parseInt(searchParams.get("limit") || "50")
     const offset = parseInt(searchParams.get("offset") || "0")
 
-    let transactions = getUserTransactions(session.user.id)
-
-    if (type) {
-      transactions = transactions.filter(tx => tx.type === type)
+    const where = {
+      userId: session.user.id,
+      ...(type && { type: type as any }),
+      ...(status && { status: status as any }),
     }
 
-    // Sort by date descending
-    transactions.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-
-    const total = transactions.length
-    const paginatedTransactions = transactions.slice(offset, offset + limit)
+    const [transactions, total] = await Promise.all([
+      prisma.transaction.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        take: limit,
+        skip: offset,
+        select: {
+          id: true,
+          type: true,
+          amount: true,
+          pricePerGram: true,
+          totalValue: true,
+          fee: true,
+          status: true,
+          isAssistantTrade: true,
+          createdAt: true,
+        },
+      }),
+      prisma.transaction.count({ where }),
+    ])
 
     return NextResponse.json({
       success: true,
-      data: paginatedTransactions.map((tx) => ({
-        id: tx.id,
-        type: tx.type,
-        goldAmount: tx.goldAmount,
-        cashAmount: tx.cashAmount,
-        goldPrice: tx.goldPrice,
-        status: tx.status,
+      data: transactions.map((tx) => ({
+        ...tx,
+        amount: Number(tx.amount),
+        pricePerGram: Number(tx.pricePerGram),
+        totalValue: Number(tx.totalValue),
+        fee: Number(tx.fee),
         createdAt: tx.createdAt.toISOString(),
       })),
       pagination: {

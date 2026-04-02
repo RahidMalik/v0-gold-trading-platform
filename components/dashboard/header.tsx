@@ -1,39 +1,42 @@
-"use client"
+"use client";
 
-import { SidebarTrigger } from "@/components/ui/sidebar"
-import { Separator } from "@/components/ui/separator"
-import { Button } from "@/components/ui/button"
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Bell, Moon, Sun } from "lucide-react"
-import { useTheme } from "next-themes"
-import { Badge } from "@/components/ui/badge"
+} from "@/components/ui/dropdown-menu";
+import { Bell, Moon, Sun } from "lucide-react";
+import { useTheme } from "next-themes";
+import { Badge } from "@/components/ui/badge";
 
 interface DashboardHeaderProps {
   user: {
-    id: string
-    name: string | null
-    email: string
-    role: string
-    referralCode: string
-  }
+    id: string;
+    name?: string | null;
+    email?: string | null;
+    role: string;
+    referralCode: string;
+  };
 }
 
 export function DashboardHeader({ user }: DashboardHeaderProps) {
-  const { setTheme, theme } = useTheme()
+  const { setTheme, theme } = useTheme();
 
   return (
     <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
       <SidebarTrigger className="-ml-1" />
       <Separator orientation="vertical" className="mr-2 h-4" />
-      
+
       <div className="flex-1">
         <p className="text-sm text-muted-foreground">
-          Welcome back, <span className="font-medium text-foreground">{user.name || "User"}</span>
+          Welcome back,{" "}
+          <span className="font-medium text-foreground">
+            {user.name || "User"}
+          </span>
         </p>
       </div>
 
@@ -60,15 +63,21 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
               <div className="space-y-2">
                 <div className="text-sm p-2 rounded-md bg-muted">
                   <p className="font-medium">Gold price alert</p>
-                  <p className="text-xs text-muted-foreground">Gold price increased by 0.5%</p>
+                  <p className="text-xs text-muted-foreground">
+                    Gold price increased by 0.5%
+                  </p>
                 </div>
                 <div className="text-sm p-2 rounded-md bg-muted">
                   <p className="font-medium">Trade completed</p>
-                  <p className="text-xs text-muted-foreground">Your buy order has been executed</p>
+                  <p className="text-xs text-muted-foreground">
+                    Your buy order has been executed
+                  </p>
                 </div>
                 <div className="text-sm p-2 rounded-md bg-muted">
                   <p className="font-medium">New referral</p>
-                  <p className="text-xs text-muted-foreground">Someone joined using your code</p>
+                  <p className="text-xs text-muted-foreground">
+                    Someone joined using your code
+                  </p>
                 </div>
               </div>
             </div>
@@ -98,5 +107,5 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
         </DropdownMenu>
       </div>
     </header>
-  )
+  );
 }
