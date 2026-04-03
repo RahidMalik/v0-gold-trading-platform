@@ -1,16 +1,22 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useSession } from "next-auth/react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { FieldGroup, Field, FieldLabel } from "@/components/ui/field"
-import { Slider } from "@/components/ui/slider"
-import { Badge } from "@/components/ui/badge"
-import { Spinner } from "@/components/ui/spinner"
-import { toast } from "sonner"
+import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { FieldGroup, Field, FieldLabel } from "@/components/ui/field";
+import { Slider } from "@/components/ui/slider";
+import { Badge } from "@/components/ui/badge";
+import { Spinner } from "@/components/ui/spinner";
+import { toast } from "sonner";
 import {
   TrendingUp,
   TrendingDown,
@@ -19,178 +25,155 @@ import {
   Coins,
   RefreshCw,
   Info,
-} from "lucide-react"
-import { formatCurrency, formatGoldWeight } from "@/lib/gold-price"
-import { GoldPriceChart } from "@/components/dashboard/gold-price-chart"
+} from "lucide-react";
+import { formatCurrency, formatGoldWeight } from "@/lib/gold-price";
+import { GoldPriceChart } from "@/components/dashboard/gold-price-chart";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip"
+} from "@/components/ui/tooltip";
+import { transactionService, goldPriceService } from "@/services";
 
 interface GoldPriceData {
-  pricePerGram: number
-  currency: string
-  change24h: number
-  changePercent24h: number
-  history?: Array<{ date: string; price: number }>
+  pricePerGram: number;
+  currency: string;
+  change24h: number;
+  changePercent24h: number;
+  history?: Array<{ date: string; price: number }>;
 }
 
 export default function TradePage() {
-  const { data: session, update } = useSession()
-  const [goldPrice, setGoldPrice] = useState<GoldPriceData | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [isTrading, setIsTrading] = useState(false)
-  const [buyAmount, setBuyAmount] = useState("")
-  const [sellAmount, setSellAmount] = useState("")
-  const [buySlider, setBuySlider] = useState([0])
-  const [sellSlider, setSellSlider] = useState([0])
+  const { data: session, update } = useSession();
+  const [goldPrice, setGoldPrice] = useState<GoldPriceData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isTrading, setIsTrading] = useState(false);
+  const [buyAmount, setBuyAmount] = useState("");
+  const [sellAmount, setSellAmount] = useState("");
+  const [buySlider, setBuySlider] = useState([0]);
+  const [sellSlider, setSellSlider] = useState([0]);
 
-  const user = session?.user
+  const user = session?.user;
 
   const fetchGoldPrice = async () => {
-    setIsLoading(true)
+    setIsLoading(true);
     try {
-      const response = await fetch("/api/gold/price?history=true&days=30")
-      const data = await response.json()
-      if (data.success) {
-        setGoldPrice(data.data)
-      }
+      const data = await goldPriceService.getCurrent();
+      if (data) setGoldPrice(data as any);
     } catch (error) {
-      console.error("Failed to fetch gold price:", error)
+      console.error("Failed to fetch gold price:", error);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    fetchGoldPrice()
-    const interval = setInterval(fetchGoldPrice, 60000)
-    return () => clearInterval(interval)
-  }, [])
+    fetchGoldPrice();
+    const interval = setInterval(fetchGoldPrice, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Calculate values
-  const buyGrams = buyAmount ? parseFloat(buyAmount) : 0
-  const buyTotal = goldPrice ? buyGrams * goldPrice.pricePerGram : 0
-  const buyFee = buyTotal * 0.005 // 0.5% fee
-  const buyGrandTotal = buyTotal + buyFee
+  const buyGrams = buyAmount ? parseFloat(buyAmount) : 0;
+  const buyTotal = goldPrice ? buyGrams * goldPrice.pricePerGram : 0;
+  const buyFee = buyTotal * 0.005; // 0.5% fee
+  const buyGrandTotal = buyTotal + buyFee;
 
-  const sellGrams = sellAmount ? parseFloat(sellAmount) : 0
-  const sellTotal = goldPrice ? sellGrams * goldPrice.pricePerGram : 0
-  const sellFee = sellTotal * 0.005
-  const sellNet = sellTotal - sellFee
+  const sellGrams = sellAmount ? parseFloat(sellAmount) : 0;
+  const sellTotal = goldPrice ? sellGrams * goldPrice.pricePerGram : 0;
+  const sellFee = sellTotal * 0.005;
+  const sellNet = sellTotal - sellFee;
 
   // Handle slider changes
   const handleBuySlider = (value: number[]) => {
-    setBuySlider(value)
+    setBuySlider(value);
     if (goldPrice && user) {
-      const maxGrams = user.cashBalance / goldPrice.pricePerGram
-      const grams = (value[0] / 100) * maxGrams
-      setBuyAmount(grams > 0 ? grams.toFixed(4) : "")
+      const maxGrams = user.cashBalance / goldPrice.pricePerGram;
+      const grams = (value[0] / 100) * maxGrams;
+      setBuyAmount(grams > 0 ? grams.toFixed(4) : "");
     }
-  }
+  };
 
   const handleSellSlider = (value: number[]) => {
-    setSellSlider(value)
+    setSellSlider(value);
     if (user) {
-      const grams = (value[0] / 100) * user.goldBalance
-      setSellAmount(grams > 0 ? grams.toFixed(4) : "")
+      const grams = (value[0] / 100) * user.goldBalance;
+      setSellAmount(grams > 0 ? grams.toFixed(4) : "");
     }
-  }
+  };
 
   // Handle trades
   const handleBuy = async () => {
     if (!buyGrams || buyGrams <= 0) {
-      toast.error("Please enter a valid amount")
-      return
+      toast.error("Please enter a valid amount");
+      return;
     }
     if (!user || buyGrandTotal > user.cashBalance) {
-      toast.error("Insufficient cash balance")
-      return
+      toast.error("Insufficient cash balance");
+      return;
     }
 
-    setIsTrading(true)
+    setIsTrading(true);
     try {
-      const response = await fetch("/api/trade", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "BUY",
-          amount: buyGrams,
-          pricePerGram: goldPrice?.pricePerGram,
-        }),
-      })
-
-      const data = await response.json()
-      if (data.success) {
-        toast.success(`Successfully purchased ${formatGoldWeight(buyGrams)} gold!`)
-        setBuyAmount("")
-        setBuySlider([0])
-        await update()
-      } else {
-        toast.error(data.error || "Trade failed")
-      }
-    } catch {
-      toast.error("Trade failed. Please try again.")
+      await transactionService.buyGold(buyGrams);
+      toast.success(
+        `Successfully purchased ${formatGoldWeight(buyGrams)} gold!`,
+      );
+      setBuyAmount("");
+      setBuySlider([0]);
+      await update();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Trade failed");
     } finally {
-      setIsTrading(false)
+      setIsTrading(false);
     }
-  }
+  };
 
   const handleSell = async () => {
-    if (!sellGrams || sellGrams <= 0) {
-      toast.error("Please enter a valid amount")
-      return
-    }
-    if (!user || sellGrams > user.goldBalance) {
-      toast.error("Insufficient gold balance")
-      return
-    }
+    if (!sellGrams || sellGrams <= 0)
+      return toast.error("Please enter a valid amount");
+    if (!user || sellGrams > user.goldBalance)
+      return toast.error("Insufficient gold balance");
 
-    setIsTrading(true)
+    setIsTrading(true);
     try {
-      const response = await fetch("/api/trade", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "SELL",
-          amount: sellGrams,
-          pricePerGram: goldPrice?.pricePerGram,
-        }),
-      })
-
-      const data = await response.json()
-      if (data.success) {
-        toast.success(`Successfully sold ${formatGoldWeight(sellGrams)} gold!`)
-        setSellAmount("")
-        setSellSlider([0])
-        await update()
-      } else {
-        toast.error(data.error || "Trade failed")
-      }
-    } catch {
-      toast.error("Trade failed. Please try again.")
+      await transactionService.sellGold(sellGrams);
+      toast.success(`Successfully sold ${formatGoldWeight(sellGrams)} gold!`);
+      setSellAmount("");
+      setSellSlider([0]);
+      await update();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Trade failed");
     } finally {
-      setIsTrading(false)
+      setIsTrading(false);
     }
-  }
+  };
 
-  const quickBuyAmounts = [1, 2, 5, 10]
-  const quickSellPercents = [25, 50, 75, 100]
+  const quickBuyAmounts = [1, 2, 5, 10];
+  const quickSellPercents = [25, 50, 75, 100];
 
   return (
     <div className="space-y-6">
       {/* Page Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-balance">Trade Gold</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-balance">
+            Trade Gold
+          </h1>
           <p className="text-muted-foreground">
             Buy and sell digital gold at real-time market prices
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={fetchGoldPrice} disabled={isLoading}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={fetchGoldPrice}
+          disabled={isLoading}
+        >
+          <RefreshCw
+            className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`}
+          />
           Refresh Price
         </Button>
       </div>
@@ -205,15 +188,24 @@ export default function TradePage() {
             <div>
               <p className="text-sm text-muted-foreground">Live Gold Price</p>
               <p className="text-2xl font-bold">
-                {goldPrice ? formatCurrency(goldPrice.pricePerGram) : "Loading..."}
-                <span className="text-sm font-normal text-muted-foreground"> /gram</span>
+                {goldPrice
+                  ? formatCurrency(goldPrice.pricePerGram)
+                  : "Loading..."}
+                <span className="text-sm font-normal text-muted-foreground">
+                  {" "}
+                  /gram
+                </span>
               </p>
             </div>
           </div>
           {goldPrice && (
-            <div className={`flex items-center gap-2 ${
-              goldPrice.changePercent24h >= 0 ? "text-green-600" : "text-red-600"
-            }`}>
+            <div
+              className={`flex items-center gap-2 ${
+                goldPrice.changePercent24h >= 0
+                  ? "text-green-600"
+                  : "text-red-600"
+              }`}
+            >
               {goldPrice.changePercent24h >= 0 ? (
                 <TrendingUp className="h-5 w-5" />
               ) : (
@@ -242,11 +234,17 @@ export default function TradePage() {
             <CardContent>
               <Tabs defaultValue="buy" className="space-y-6">
                 <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="buy" className="data-[state=active]:bg-green-600 data-[state=active]:text-white">
+                  <TabsTrigger
+                    value="buy"
+                    className="data-[state=active]:bg-green-600 data-[state=active]:text-white"
+                  >
                     <ArrowUpRight className="h-4 w-4 mr-2" />
                     Buy Gold
                   </TabsTrigger>
-                  <TabsTrigger value="sell" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">
+                  <TabsTrigger
+                    value="sell"
+                    className="data-[state=active]:bg-red-600 data-[state=active]:text-white"
+                  >
                     <ArrowDownRight className="h-4 w-4 mr-2" />
                     Sell Gold
                   </TabsTrigger>
@@ -257,11 +255,16 @@ export default function TradePage() {
                   <FieldGroup>
                     <div className="flex items-center justify-between">
                       <p className="text-sm text-muted-foreground">
-                        Available: <span className="font-medium text-foreground">{formatCurrency(user?.cashBalance || 0)}</span>
+                        Available:{" "}
+                        <span className="font-medium text-foreground">
+                          {formatCurrency(user?.cashBalance || 0)}
+                        </span>
                       </p>
                     </div>
                     <Field>
-                      <FieldLabel htmlFor="buyAmount">Amount (grams)</FieldLabel>
+                      <FieldLabel htmlFor="buyAmount">
+                        Amount (grams)
+                      </FieldLabel>
                       <Input
                         id="buyAmount"
                         type="number"
@@ -270,11 +273,13 @@ export default function TradePage() {
                         placeholder="Enter gold amount"
                         value={buyAmount}
                         onChange={(e) => {
-                          setBuyAmount(e.target.value)
+                          setBuyAmount(e.target.value);
                           if (goldPrice && user) {
-                            const maxGrams = user.cashBalance / goldPrice.pricePerGram
-                            const percent = (parseFloat(e.target.value) / maxGrams) * 100
-                            setBuySlider([Math.min(percent, 100)])
+                            const maxGrams =
+                              user.cashBalance / goldPrice.pricePerGram;
+                            const percent =
+                              (parseFloat(e.target.value) / maxGrams) * 100;
+                            setBuySlider([Math.min(percent, 100)]);
                           }
                         }}
                       />
@@ -330,7 +335,9 @@ export default function TradePage() {
                     </div>
                     <div className="border-t pt-3 flex justify-between font-semibold">
                       <span>Total</span>
-                      <span className="text-green-600">{formatCurrency(buyGrandTotal)}</span>
+                      <span className="text-green-600">
+                        {formatCurrency(buyGrandTotal)}
+                      </span>
                     </div>
                   </div>
 
@@ -338,10 +345,16 @@ export default function TradePage() {
                     className="w-full bg-green-600 hover:bg-green-700"
                     size="lg"
                     onClick={handleBuy}
-                    disabled={isTrading || !buyGrams || buyGrandTotal > (user?.cashBalance || 0)}
+                    disabled={
+                      isTrading ||
+                      !buyGrams ||
+                      buyGrandTotal > (user?.cashBalance || 0)
+                    }
                   >
                     {isTrading ? <Spinner className="mr-2" /> : null}
-                    {isTrading ? "Processing..." : `Buy ${buyGrams ? formatGoldWeight(buyGrams) : "Gold"}`}
+                    {isTrading
+                      ? "Processing..."
+                      : `Buy ${buyGrams ? formatGoldWeight(buyGrams) : "Gold"}`}
                   </Button>
                 </TabsContent>
 
@@ -350,11 +363,16 @@ export default function TradePage() {
                   <FieldGroup>
                     <div className="flex items-center justify-between">
                       <p className="text-sm text-muted-foreground">
-                        Available: <span className="font-medium text-foreground">{formatGoldWeight(user?.goldBalance || 0)}</span>
+                        Available:{" "}
+                        <span className="font-medium text-foreground">
+                          {formatGoldWeight(user?.goldBalance || 0)}
+                        </span>
                       </p>
                     </div>
                     <Field>
-                      <FieldLabel htmlFor="sellAmount">Amount (grams)</FieldLabel>
+                      <FieldLabel htmlFor="sellAmount">
+                        Amount (grams)
+                      </FieldLabel>
                       <Input
                         id="sellAmount"
                         type="number"
@@ -363,10 +381,12 @@ export default function TradePage() {
                         placeholder="Enter gold amount"
                         value={sellAmount}
                         onChange={(e) => {
-                          setSellAmount(e.target.value)
+                          setSellAmount(e.target.value);
                           if (user) {
-                            const percent = (parseFloat(e.target.value) / user.goldBalance) * 100
-                            setSellSlider([Math.min(percent, 100)])
+                            const percent =
+                              (parseFloat(e.target.value) / user.goldBalance) *
+                              100;
+                            setSellSlider([Math.min(percent, 100)]);
                           }
                         }}
                       />
@@ -392,9 +412,9 @@ export default function TradePage() {
                           size="sm"
                           onClick={() => {
                             if (user) {
-                              const grams = (percent / 100) * user.goldBalance
-                              setSellAmount(grams.toFixed(4))
-                              setSellSlider([percent])
+                              const grams = (percent / 100) * user.goldBalance;
+                              setSellAmount(grams.toFixed(4));
+                              setSellSlider([percent]);
                             }
                           }}
                         >
@@ -428,7 +448,9 @@ export default function TradePage() {
                     </div>
                     <div className="border-t pt-3 flex justify-between font-semibold">
                       <span>You receive</span>
-                      <span className="text-red-600">{formatCurrency(sellNet)}</span>
+                      <span className="text-red-600">
+                        {formatCurrency(sellNet)}
+                      </span>
                     </div>
                   </div>
 
@@ -436,10 +458,16 @@ export default function TradePage() {
                     className="w-full bg-red-600 hover:bg-red-700"
                     size="lg"
                     onClick={handleSell}
-                    disabled={isTrading || !sellGrams || sellGrams > (user?.goldBalance || 0)}
+                    disabled={
+                      isTrading ||
+                      !sellGrams ||
+                      sellGrams > (user?.goldBalance || 0)
+                    }
                   >
                     {isTrading ? <Spinner className="mr-2" /> : null}
-                    {isTrading ? "Processing..." : `Sell ${sellGrams ? formatGoldWeight(sellGrams) : "Gold"}`}
+                    {isTrading
+                      ? "Processing..."
+                      : `Sell ${sellGrams ? formatGoldWeight(sellGrams) : "Gold"}`}
                   </Button>
                 </TabsContent>
               </Tabs>
@@ -466,12 +494,17 @@ export default function TradePage() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
-              <Badge variant="secondary" className="h-10 w-10 rounded-full p-0 flex items-center justify-center">
+              <Badge
+                variant="secondary"
+                className="h-10 w-10 rounded-full p-0 flex items-center justify-center"
+              >
                 <TrendingUp className="h-5 w-5" />
               </Badge>
               <div>
                 <p className="font-medium">Instant Execution</p>
-                <p className="text-sm text-muted-foreground">Trades execute immediately at market price</p>
+                <p className="text-sm text-muted-foreground">
+                  Trades execute immediately at market price
+                </p>
               </div>
             </div>
           </CardContent>
@@ -479,12 +512,17 @@ export default function TradePage() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
-              <Badge variant="secondary" className="h-10 w-10 rounded-full p-0 flex items-center justify-center">
+              <Badge
+                variant="secondary"
+                className="h-10 w-10 rounded-full p-0 flex items-center justify-center"
+              >
                 <Coins className="h-5 w-5" />
               </Badge>
               <div>
                 <p className="font-medium">Low Fees</p>
-                <p className="text-sm text-muted-foreground">Only 0.5% fee per transaction</p>
+                <p className="text-sm text-muted-foreground">
+                  Only 0.5% fee per transaction
+                </p>
               </div>
             </div>
           </CardContent>
@@ -492,17 +530,22 @@ export default function TradePage() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
-              <Badge variant="secondary" className="h-10 w-10 rounded-full p-0 flex items-center justify-center">
+              <Badge
+                variant="secondary"
+                className="h-10 w-10 rounded-full p-0 flex items-center justify-center"
+              >
                 <RefreshCw className="h-5 w-5" />
               </Badge>
               <div>
                 <p className="font-medium">Real-time Prices</p>
-                <p className="text-sm text-muted-foreground">Updated every 60 seconds</p>
+                <p className="text-sm text-muted-foreground">
+                  Updated every 60 seconds
+                </p>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
     </div>
-  )
+  );
 }

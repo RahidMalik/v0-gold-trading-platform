@@ -5,16 +5,16 @@ export type TransactionType = "BUY" | "SELL" | "DEPOSIT" | "WITHDRAWAL" | "REFER
 export type TransactionStatus = "PENDING" | "COMPLETED" | "FAILED" | "CANCELLED";
 
 export interface Transaction {
-    id: string;
-    type: TransactionType;
-    amount: number;
-    pricePerGram: number;
-    totalValue: number;
-    fee: number;
-    status: TransactionStatus;
-    isAssistantTrade: boolean;
-    createdAt: string;
-};
+    id: string
+    type: "BUY" | "SELL" | "DEPOSIT" | "WITHDRAWAL" | "REFERRAL_BONUS" | "ASSISTANT_PROFIT"
+    amount: number          // gold grams
+    pricePerGram: number
+    totalValue: number
+    fee: number
+    status: "PENDING" | "COMPLETED" | "FAILED" | "CANCELLED"
+    isAssistantTrade: boolean
+    createdAt: string
+}
 
 export const transactionService = {
     getAll: async (params?: {

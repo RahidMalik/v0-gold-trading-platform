@@ -1,105 +1,88 @@
-"use client"
+"use client";
 
-import { ArrowUpRight, ArrowDownRight, Gift, Bot } from "lucide-react"
-import { formatCurrency, formatGoldWeight } from "@/lib/gold-price"
-import { Empty } from "@/components/ui/empty"
-
-// Demo transactions for UI display
-const demoTransactions = [
-  {
-    id: "1",
-    type: "BUY",
-    amount: 2.5,
-    totalValue: 2875000,
-    createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-  },
-  {
-    id: "2",
-    type: "SELL",
-    amount: 1.0,
-    totalValue: 1150000,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-  },
-  {
-    id: "3",
-    type: "REFERRAL_BONUS",
-    amount: 0.1,
-    totalValue: 115000,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-  },
-  {
-    id: "4",
-    type: "BUY",
-    amount: 5.0,
-    totalValue: 5750000,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
-  },
-  {
-    id: "5",
-    type: "ASSISTANT_PROFIT",
-    amount: 0.05,
-    totalValue: 57500,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 72).toISOString(),
-  },
-]
+import { useState, useEffect } from "react";
+import { ArrowUpRight, ArrowDownRight, Gift, Bot } from "lucide-react";
+import { formatCurrency, formatGoldWeight } from "@/lib/gold-price";
+import { Empty, EmptyTitle, EmptyDescription } from "@/components/ui/empty";
+import { transactionService } from "@/services";
+import { Spinner } from "@/components/ui/spinner";
 
 const getTransactionIcon = (type: string) => {
   switch (type) {
     case "BUY":
-      return <ArrowUpRight className="h-4 w-4 text-green-600" />
+      return <ArrowUpRight className="h-4 w-4 text-green-600" />;
     case "SELL":
-      return <ArrowDownRight className="h-4 w-4 text-red-600" />
+      return <ArrowDownRight className="h-4 w-4 text-red-600" />;
     case "REFERRAL_BONUS":
-      return <Gift className="h-4 w-4 text-primary" />
+      return <Gift className="h-4 w-4 text-primary" />;
     case "ASSISTANT_PROFIT":
-      return <Bot className="h-4 w-4 text-blue-600" />
+      return <Bot className="h-4 w-4 text-blue-600" />;
     default:
-      return <ArrowUpRight className="h-4 w-4" />
+      return <ArrowUpRight className="h-4 w-4" />;
   }
-}
+};
 
 const getTransactionLabel = (type: string) => {
   switch (type) {
     case "BUY":
-      return "Gold Purchase"
+      return "Gold Purchase";
     case "SELL":
-      return "Gold Sale"
+      return "Gold Sale";
     case "REFERRAL_BONUS":
-      return "Referral Bonus"
+      return "Referral Bonus";
     case "ASSISTANT_PROFIT":
-      return "AI Assistant Profit"
+      return "AI Assistant Profit";
     default:
-      return type
+      return type;
   }
-}
+};
 
 const formatTimeAgo = (dateString: string) => {
-  const date = new Date(dateString)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffMins = Math.floor(diffMs / (1000 * 60))
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-
-  if (diffMins < 60) {
-    return `${diffMins}m ago`
-  } else if (diffHours < 24) {
-    return `${diffHours}h ago`
-  } else {
-    return `${diffDays}d ago`
-  }
-}
+  const date = new Date(dateString);
+  const diffMs = Date.now() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  return `${diffDays}d ago`;
+};
 
 export function RecentTransactions() {
-  const transactions = demoTransactions
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      try {
+        const res = await transactionService.getAll({ limit: 5 });
+        setTransactions(res.data || []);
+      } catch (err) {
+        console.error("Failed to fetch transactions:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchTransactions();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-8">
+        <Spinner />
+      </div>
+    );
+  }
 
   if (transactions.length === 0) {
     return (
-      <Empty
-        title="No transactions yet"
-        description="Start trading to see your activity here"
-      />
-    )
+      <Empty>
+        <EmptyTitle>No transactions yet</EmptyTitle>
+        <EmptyDescription>
+          Start trading to see your activity here
+        </EmptyDescription>
+      </Empty>
+    );
   }
 
   return (
@@ -118,9 +101,11 @@ export function RecentTransactions() {
             </p>
           </div>
           <div className="text-right">
-            <p className={`text-sm font-medium ${
-              tx.type === "SELL" ? "text-red-600" : "text-green-600"
-            }`}>
+            <p
+              className={`text-sm font-medium ${
+                tx.type === "SELL" ? "text-red-600" : "text-green-600"
+              }`}
+            >
               {tx.type === "SELL" ? "-" : "+"}
               {formatCurrency(tx.totalValue)}
             </p>
@@ -131,5 +116,5 @@ export function RecentTransactions() {
         </div>
       ))}
     </div>
-  )
+  );
 }

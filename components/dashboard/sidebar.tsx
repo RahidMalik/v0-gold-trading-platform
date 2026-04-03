@@ -13,7 +13,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarSeparator,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import {
   DropdownMenu,
@@ -92,6 +92,7 @@ const menuItems = [
 
 export function DashboardSidebar({ user }: DashboardSidebarProps) {
   const pathname = usePathname();
+  const { state } = useSidebar();
 
   const isAdmin = user.role === "ADMIN" || user.role === "SUPER_ADMIN";
 
@@ -127,29 +128,33 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
         </SidebarMenu>
       </SidebarHeader>
 
-      <SidebarSeparator />
-
       <SidebarContent>
         {/* Balance Card */}
-        <SidebarGroup>
-          <SidebarGroupLabel>Your Balance</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <div className="rounded-lg bg-sidebar-accent p-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-sidebar-foreground/70">Gold</span>
-                <span className="text-sm font-semibold text-primary">
-                  {formatGoldWeight(user.goldBalance)}
-                </span>
+        {state === "expanded" && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Your Balance</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <div className="rounded-lg bg-sidebar-accent p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-sidebar-foreground/70">
+                    Gold
+                  </span>
+                  <span className="text-sm font-semibold text-primary">
+                    {formatGoldWeight(user.goldBalance)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-sidebar-foreground/70">
+                    Cash
+                  </span>
+                  <span className="text-sm font-semibold">
+                    {formatCurrency(user.cashBalance)}
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-sidebar-foreground/70">Cash</span>
-                <span className="text-sm font-semibold">
-                  {formatCurrency(user.cashBalance)}
-                </span>
-              </div>
-            </div>
-          </SidebarGroupContent>
-        </SidebarGroup>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
         {/* Main Menu */}
         {menuItems.map((section) => (
